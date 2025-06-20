@@ -9,73 +9,88 @@ export default function App() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const API_BASE = "http://35.200.164.130:8000"; // ✅ Use correct backend IP here
+
   const uploadPDF = async () => {
     const form = new FormData();
     form.append("file", file);
     form.append("strategy", strategy);
     setLoading(true);
-    const res = await axios.post("http://34.100.240.160:8000/analyze-pdf/", form);
-    setLoading(false);
-    setWinrate(res.data.winrate);
+    try {
+      const res = await axios.post(`${API_BASE}/upload-to-backblaze`, form);
+      setWinrate(res.data.winrate);
+    } catch (err) {
+      alert("Upload failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const askModel = async () => {
     const form = new FormData();
     form.append("prompt", prompt);
-    const res = await axios.post("http://34.100.240.160:8000/chat/", form);
-    setChat([...chat, { q: prompt, a: res.data.response }]);
-    setPrompt("");
-  };
-
-  const downloadReport = () => {
-    window.open("http://34.100.240.160:8000/get-report/");
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API_BASE}/chat`, form);
+      setChat([...chat, { role: "user", content: prompt }, res.data]);
+      setPrompt("");
+    } catch (err) {
+      alert("AI chat failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">📈 AI Backtesting Chatbot</h1>
+    <div style={{ padding: "2rem" }}>
+      <h1>📈 AI Backtesting Chatbot</h1>
 
-      <div>
-        <input type="file" onChange={(e) => setFile(e.target.files[0])} />
-        <input
-          type="text"
-          value={strategy}
-          onChange={(e) => setStrategy(e.target.value)}
-          placeholder="Enter strategy logic (e.g. ema20 > ema50)"
-          className="border p-2 w-full mt-2"
-        />
-        <button onClick={uploadPDF} className="mt-2 bg-blue-600 text-white px-4 py-2 rounded">
-          Run Backtest
-        </button>
-        {loading && <p>⏳ Processing...</p>}
-        {winrate && <p className="mt-2">✅ Winrate: {winrate.toFixed(2)}%</p>}
-        <button onClick={downloadReport} className="text-sm mt-2 underline">
-          📥 Download CSV Report
-        </button>
-      </div>
+      <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+      <input
+        type="text"
+        placeholder="Enter strategy (e.g., ema20 > ema50)"
+        value={strategy}
+        onChange={(e) => setStrategy(e.target.value)}
+        style={{ marginLeft: "1rem" }}
+      />
+      <button onClick={uploadPDF} disabled={loading}>
+        Run Backtest
+      </button>
+      <button
+        onClick={() => {
+          const a = document.createElement("a");
+          a.href = `data:text/csv;charset=utf-8,Winrate: ${winrate}`;
+          a.download = "result.csv";
+          a.click();
+        }}
+        disabled={!winrate}
+      >
+        Download CSV Report
+      </button>
 
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-2">💬 AI Strategy Chat</h2>
-        <textarea
-          className="w-full border p-2"
-          rows={3}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Ask the AI about your strategy..."
-        ></textarea>
-        <button onClick={askModel} className="mt-2 bg-green-600 text-white px-4 py-2 rounded">
-          Ask Model
-        </button>
-        <div className="mt-4 space-y-3">
-          {chat.map((c, i) => (
-            <div key={i} className="bg-gray-100 p-3 rounded">
-              <p><strong>You:</strong> {c.q}</p>
-              <p><strong>AI:</strong> {c.a}</p>
-            </div>
-          ))}
-        </div>
+      {winrate && <p>📊 Estimated Winrate: <b>{winrate}%</b></p>}
+
+      <h2>🧠 AI Strategy Chat</h2>
+      <textarea
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        rows={3}
+        placeholder="Ask the AI about your strategy..."
+        style={{ width: "100%", marginBottom: "1rem" }}
+      />
+      <button onClick={askModel} disabled={loading}>
+        Ask Model
+      </button>
+
+      <div style={{ marginTop: "2rem" }}>
+        {chat.map((msg, i) => (
+          <p key={i}>
+            <b>{msg.role}:</b> {msg.content}
+          </p>
+        ))}
       </div>
     </div>
   );
 }
+
 
