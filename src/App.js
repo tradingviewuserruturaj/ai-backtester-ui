@@ -7,9 +7,10 @@ export default function App() {
   const [winrate, setWinrate] = useState(null);
   const [chat, setChat] = useState([]);
   const [prompt, setPrompt] = useState("");
+  const [model, setModel] = useState("deepseek/deepseek-r1-0528:free"); // ✅ Default model
   const [loading, setLoading] = useState(false);
 
-  const API_BASE = "http://35.200.164.130:8000"; // ✅ Use correct backend IP here
+  const API_BASE = "http://35.200.164.130:8000"; // ✅ Backend URL
 
   const uploadPDF = async () => {
     const form = new FormData();
@@ -29,6 +30,7 @@ export default function App() {
   const askModel = async () => {
     const form = new FormData();
     form.append("prompt", prompt);
+    form.append("model", model); // ✅ send model to backend
     setLoading(true);
     try {
       const res = await axios.post(`${API_BASE}/chat`, form);
@@ -71,6 +73,15 @@ export default function App() {
       {winrate && <p>📊 Estimated Winrate: <b>{winrate}%</b></p>}
 
       <h2>🧠 AI Strategy Chat</h2>
+
+      <input
+        type="text"
+        placeholder="Model (e.g., deepseek/deepseek-r1-0528:free)"
+        value={model}
+        onChange={(e) => setModel(e.target.value)}
+        style={{ width: "100%", marginBottom: "1rem" }}
+      />
+
       <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
@@ -78,6 +89,7 @@ export default function App() {
         placeholder="Ask the AI about your strategy..."
         style={{ width: "100%", marginBottom: "1rem" }}
       />
+
       <button onClick={askModel} disabled={loading}>
         Ask Model
       </button>
@@ -92,5 +104,6 @@ export default function App() {
     </div>
   );
 }
+
 
 
